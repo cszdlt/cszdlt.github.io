@@ -4,17 +4,73 @@
   
     
     <entry>
-      <title>MySql 学习(1)</title>
-      <link href="/2024/04/11/MySql-%E5%AD%A6%E4%B9%A0/"/>
-      <url>/2024/04/11/MySql-%E5%AD%A6%E4%B9%A0/</url>
+      <title>MySQL 学习(2)</title>
+      <link href="/2024/06/06/MySQL-%E5%AD%A6%E4%B9%A0-2/"/>
+      <url>/2024/06/06/MySQL-%E5%AD%A6%E4%B9%A0-2/</url>
       
-        <content type="html"><![CDATA[<h3 id="数据引擎"><a href="#数据引擎" class="headerlink" title="数据引擎"></a>数据引擎</h3><p>MySql 使用 InnoDB 作为数据引擎，InnoDB 使用 B+树 做索引。</p><h4 id="B-树"><a href="#B-树" class="headerlink" title="B+树"></a>B+树</h4><p>自平衡多叉搜索树，将信息存储在叶子节点，索引时存在冗余索引，即使在根节点找到了 Key，也需要向下搜索到叶子节点获取具体的数据信息。叶子节点根据 key 升序存储数据，不同节点之间通过链表的形式连接。</p><p>数据信息全部存在叶子节点的好处有：</p><ul><li>可以将索引信息放在内存中，加快索引效率。</li><li>可以方便的进行范围查询或者全局数据查询。</li><li>每次查询深度相同，效率接近。</li></ul><h4 id="InnoDB-中的-B-树"><a href="#InnoDB-中的-B-树" class="headerlink" title="InnoDB 中的 B+树"></a>InnoDB 中的 B+树</h4><p>InnoDB 中 B+树 的每一个节点，都是一个数据页(16KB，优化磁盘读取，每次读取多个磁道)，数据页中包含页头、目录、用户数据等信息。</p><ul><li>对于叶子节点，页头中包含排序中下一个叶子节点的首地址。</li><li>目录中存储多个偏移量，目录与用户数据的关系可以看成一个 2 层的 B+树，目录是根，用户数据是叶子节点。用于快速找到索引信息。</li><li>用户数据，用户数据分成 <strong>多块</strong> 存储多个具体信息，每条信息包含索引值，存储的数据(非叶子节点保存索引信息，叶子节点保存数据库中的一行的信息)，同时还存有下一条数据的指针地址。每块的最大值的信息中还保存这块中真实数据的数量(第一块为2，其余块不大于8)，目录的偏移量指向的就是每块的最大值。</li></ul><p>搜索时对于每个节点，先二分目录，找到对应块，再从对应块中根据索引迭代，拿到具体信息。</p><h3 id="MySql-的大体结构"><a href="#MySql-的大体结构" class="headerlink" title="MySql 的大体结构"></a>MySql 的大体结构</h3><p>MySql 分为两层，server 和 数据引擎 层。server 层大概分为 连接器、词法分析、语法分析、预处理器、优化器、执行器 这几个模块。</p><h4 id="连接器"><a href="#连接器" class="headerlink" title="连接器"></a>连接器</h4><p>用于跟客户端做连接，接收客户端请求，处理权限及连接状态等信息。</p><blockquote><p>早期的 MySql 还会有请求缓存，对于相同请求会去缓存中获取信息，后来因为命中率太低给去掉了。</p></blockquote><h4 id="词法分析和语法分析"><a href="#词法分析和语法分析" class="headerlink" title="词法分析和语法分析"></a>词法分析和语法分析</h4><p>主要分析 Sql 语句是否正确。</p><h4 id="预处理器"><a href="#预处理器" class="headerlink" title="预处理器"></a>预处理器</h4><p>查询 Sql 语句需要的表是否存在等。</p><h4 id="优化器"><a href="#优化器" class="headerlink" title="优化器"></a>优化器</h4><p>对操作进行优化，判断该如何查询数据。对于有索引的请求，判断是主索引还是二级索引，确定该去哪个&#x2F;些索引树上找数据。判断索引覆盖等。</p><blockquote><p>索引覆盖：对于二级索引来说，如果需要的数据都能在该索引树中获取，那么就不需要从二级索引中拿到主索引，再去主索引树中获取具体信息了。</p></blockquote><h4 id="执行器"><a href="#执行器" class="headerlink" title="执行器"></a>执行器</h4><p>跟数据引擎交互的模块，跟数据引擎交互，并判断是否完成等。</p><ul><li>对于复合索引，遵从左匹配原则，如果索引为 (a,b)，查询条件为 b 是无法利用上该索引的。</li><li>对于复合索引，如果右边的索引失效了，早期的 MySql 在从 数据引擎 中拿到数据时，执行器会再去主索引获取该条记录的信息，再判断索引条件是否匹配；新版的 MySql 在这种情况下，会在执行器中判断拿到的数据是否符合索引条件，符合之后再去主索引树中获取具体信息。(索引下推)</li><li>执行器每拿到一条数据就将一条数据返回给客户端了。</li></ul><h3 id="学习网站："><a href="#学习网站：" class="headerlink" title="学习网站："></a>学习网站：</h3><p><a href="https://www.xiaolincoding.com/mysql/base/how_select.html#mysql-%E6%89%A7%E8%A1%8C%E6%B5%81%E7%A8%8B%E6%98%AF%E6%80%8E%E6%A0%B7%E7%9A%84">执行一条 select 语句，期间发生了什么？</a><br><a href="https://www.xiaolincoding.com/mysql/index/page.html">从数据页的角度看 B+ 树</a><br><a href="https://www.xiaolincoding.com/mysql/index/why_index_chose_bpuls_tree.html">为什么 MySQL 采用 B+ 树作为索引？</a></p>]]></content>
+        <content type="html"><![CDATA[<h3 id="MySql-数据库组件"><a href="#MySql-数据库组件" class="headerlink" title="MySql 数据库组件"></a>MySql 数据库组件</h3><p>分为连接管理器、查询管理器以及数据处理器。</p><h4 id="连接管理器"><a href="#连接管理器" class="headerlink" title="连接管理器"></a>连接管理器</h4><p>连接管理器也叫客户端管理器，主要用于管理客户端的连接以及鉴权判断，接收、响应请求等。</p><h4 id="查询管理器"><a href="#查询管理器" class="headerlink" title="查询管理器"></a>查询管理器</h4><p>查询管理器又分为查询分析、查询预处理、查询优化和查询执行等几个模块。</p><ul><li>查询分析：通过词法法分析和语法分析检查该查询是否合法。</li><li>查询预处理：检查查询语句所需的表是否存在、字段是否存在、运算是否合法。</li><li>查询优化：根据表信息以及查询语句，优化查询的执行步骤。<ul><li>对于存在子查询的语句，优化掉子查询。</li><li>对于存在连接的语句，优化连接效率。</li><li>处理索引覆盖等。</li></ul></li><li>查询执行：跟数据引擎交互的模块，跟数据引擎交互，并判断是否完成等。<ul><li>对于复合索引，遵从左匹配原则，如果索引为 (a,b)，查询条件为 b 是无法利用上该索引的。</li><li>对于复合索引，如果右边的索引失效了，早期的 MySQL 在从 数据引擎 中拿到数据时，执行器会再去主索引获取该条记录的信息，再判断索引条件是否匹配；新版的 MySQL 在这种情况下，会在执行器中判断拿到的数据是否符合索引条件，符合之后再去主索引树中获取具体信息。(索引下推)</li><li>执行器每拿到一条数据就将一条数据返回给客户端了。</li></ul></li></ul>]]></content>
       
+      
+      <categories>
+          
+          <category> 数据库 </category>
+          
+      </categories>
       
       
         <tags>
             
-            <tag> MySql </tag>
+            <tag> MySQL </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>SqlDB 学习</title>
+      <link href="/2024/06/06/SqlDB-%E5%AD%A6%E4%B9%A0/"/>
+      <url>/2024/06/06/SqlDB-%E5%AD%A6%E4%B9%A0/</url>
+      
+        <content type="html"><![CDATA[<h3 id="MySql-数据库组件"><a href="#MySql-数据库组件" class="headerlink" title="MySql 数据库组件"></a>MySql 数据库组件</h3><p>分为连接管理器、查询管理器以及数据处理器。</p><h4 id="连接管理器"><a href="#连接管理器" class="headerlink" title="连接管理器"></a>连接管理器</h4><p>连接管理器也叫客户端管理器，主要用于管理客户端的连接以及鉴权判断，接收、响应请求等。</p><h4 id="查询管理器"><a href="#查询管理器" class="headerlink" title="查询管理器"></a>查询管理器</h4><p>查询管理器又分为查询分析、查询预处理、查询优化和查询执行等几个模块。</p><ul><li>查询分析：通过词法法分析和语法分析检查该查询是否合法。</li><li>查询预处理：检查查询语句所需的表是否存在、字段是否存在、运算是否合法。</li><li>查询优化：根据表信息以及查询语句，优化查询的执行步骤。<ul><li>对于存在子查询的语句，优化掉子查询。</li><li>对于存在连接的语句，优化连接效率。</li><li>处理索引覆盖等。</li></ul></li><li>查询执行：跟数据引擎交互的模块，跟数据引擎交互，并判断是否完成等。<ul><li>对于复合索引，遵从左匹配原则，如果索引为 (a,b)，查询条件为 b 是无法利用上该索引的。</li><li>对于复合索引，如果右边的索引失效了，早期的 MySQL 在从 数据引擎 中拿到数据时，执行器会再去主索引获取该条记录的信息，再判断索引条件是否匹配；新版的 MySQL 在这种情况下，会在执行器中判断拿到的数据是否符合索引条件，符合之后再去主索引树中获取具体信息。(索引下推)</li><li>执行器每拿到一条数据就将一条数据返回给客户端了。</li></ul></li></ul>]]></content>
+      
+      
+      <categories>
+          
+          <category> 数据库 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> MySQL </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
+      <title>MySQL 学习(1)</title>
+      <link href="/2024/04/11/MySQL-%E5%AD%A6%E4%B9%A0-1/"/>
+      <url>/2024/04/11/MySQL-%E5%AD%A6%E4%B9%A0-1/</url>
+      
+        <content type="html"><![CDATA[<h3 id="数据引擎"><a href="#数据引擎" class="headerlink" title="数据引擎"></a>数据引擎</h3><p>MySQL 默认使用 InnoDB 作为数据引擎，InnoDB 使用 B+树 做索引。</p><h4 id="B-树"><a href="#B-树" class="headerlink" title="B+树"></a>B+树</h4><p>自平衡多叉搜索树，将信息存储在叶子节点，索引时存在冗余索引，即使在根节点找到了 Key，也需要向下搜索到叶子节点获取具体的数据信息。叶子节点根据 key 升序存储数据，不同节点之间通过链表的形式连接。</p><p>数据信息全部存在叶子节点的好处有：</p><ul><li>可以将索引信息放在内存中，加快索引效率。</li><li>可以方便的进行范围查询或者全局数据查询。</li><li>每次查询深度相同，效率接近。</li></ul><h4 id="InnoDB-中的-B-树"><a href="#InnoDB-中的-B-树" class="headerlink" title="InnoDB 中的 B+树"></a>InnoDB 中的 B+树</h4><p>InnoDB 中 B+树 的每一个节点，都是一个数据页(16KB，优化磁盘读取，每次读取多个磁道)，数据页中包含页头、目录、用户数据等信息。</p><ul><li>对于叶子节点，页头中包含排序中下一个叶子节点的首地址。</li><li>目录中存储多个偏移量，目录与用户数据的关系可以看成一个 2 层的 B+树，目录是根，用户数据是叶子节点。用于快速找到索引信息。</li><li>用户数据，用户数据分成 <strong>多块</strong> 存储多个具体信息，每条信息包含索引值，存储的数据(非叶子节点保存索引信息，叶子节点保存数据库中的一行的信息)，同时还存有下一条数据的指针地址。每块的最大值的信息中还保存这块中真实数据的数量(第一块为2，其余块不大于8)，目录的偏移量指向的就是每块的最大值。</li></ul><p>搜索时对于每个节点，先二分目录，找到对应块，再从对应块中根据索引迭代，拿到具体信息。</p><h3 id="MySQL-的大体结构"><a href="#MySQL-的大体结构" class="headerlink" title="MySQL 的大体结构"></a>MySQL 的大体结构</h3><p>MySQL 分为两层，server 和 数据引擎 层。server 层大概分为 连接器、词法分析、语法分析、预处理器、优化器、执行器 这几个模块。</p><h4 id="连接器"><a href="#连接器" class="headerlink" title="连接器"></a>连接器</h4><p>用于跟客户端做连接，接收客户端请求，处理权限及连接状态等信息。</p><blockquote><p>早期的 MySQL 还会有请求缓存，对于相同请求会去缓存中获取信息，后来因为命中率太低给去掉了。</p></blockquote><h4 id="词法分析和语法分析"><a href="#词法分析和语法分析" class="headerlink" title="词法分析和语法分析"></a>词法分析和语法分析</h4><p>主要分析 Sql 语句是否正确。</p><h4 id="预处理器"><a href="#预处理器" class="headerlink" title="预处理器"></a>预处理器</h4><p>查询 Sql 语句需要的表是否存在等。</p><h4 id="优化器"><a href="#优化器" class="headerlink" title="优化器"></a>优化器</h4><p>对操作进行优化，判断该如何查询数据。对于有索引的请求，判断是主索引还是二级索引，确定该去哪个&#x2F;些索引树上找数据。判断索引覆盖等。</p><blockquote><p>索引覆盖：对于二级索引来说，如果需要的数据都能在该索引树中获取，那么就不需要从二级索引中拿到主索引，再去主索引树中获取具体信息了。</p></blockquote><h4 id="执行器"><a href="#执行器" class="headerlink" title="执行器"></a>执行器</h4><p>跟数据引擎交互的模块，跟数据引擎交互，并判断是否完成等。</p><ul><li>对于复合索引，遵从左匹配原则，如果索引为 (a,b)，查询条件为 b 是无法利用上该索引的。</li><li>对于复合索引，如果右边的索引失效了，早期的 MySQL 在从 数据引擎 中拿到数据时，执行器会再去主索引获取该条记录的信息，再判断索引条件是否匹配；新版的 MySQL 在这种情况下，会在执行器中判断拿到的数据是否符合索引条件，符合之后再去主索引树中获取具体信息。(索引下推)</li><li>执行器每拿到一条数据就将一条数据返回给客户端了。</li></ul><h3 id="学习网站："><a href="#学习网站：" class="headerlink" title="学习网站："></a>学习网站：</h3><p><a href="https://www.xiaolincoding.com/MySQL/base/how_select.html#MySQL-%E6%89%A7%E8%A1%8C%E6%B5%81%E7%A8%8B%E6%98%AF%E6%80%8E%E6%A0%B7%E7%9A%84">执行一条 select 语句，期间发生了什么？</a><br><a href="https://www.xiaolincoding.com/MySQL/index/page.html">从数据页的角度看 B+ 树</a><br><a href="https://www.xiaolincoding.com/MySQL/index/why_index_chose_bpuls_tree.html">为什么 MySQL 采用 B+ 树作为索引？</a></p>]]></content>
+      
+      
+      <categories>
+          
+          <category> 数据库 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> MySQL </tag>
             
         </tags>
       
