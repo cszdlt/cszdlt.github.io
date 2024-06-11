@@ -24,7 +24,7 @@
 <meta property="og:description" content="MySQL 的锁MySQL 都有哪些锁MySql 的锁一般分为 独占锁(X锁) 和 共享锁(S锁) 。对于锁的粒度，又有如下划分：  全局锁：会将整个 MySQL 实例锁住，一般只会在备份时使用 表级锁：表级锁有四种，即： 表锁： 表锁会对整个表使用 X锁 或 S锁。 元数据锁(MDL)： 元数据锁锁的是表结构，对于 CURD 操作，会使用 MDL 读锁；对于修改表结构的操作，则会使用 MDL 写">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2024-06-09T11:16:06.000Z">
-<meta property="article:modified_time" content="2024-06-11T08:43:08.820Z">
+<meta property="article:modified_time" content="2024-06-11T09:24:41.889Z">
 <meta property="article:author" content="歌与戈">
 <meta property="article:tag" content="MySQL">
 <meta name="twitter:card" content="summary_large_image">
@@ -273,7 +273,7 @@
               <p id="updated-time" class="note note-info" style="">
                 
                   
-                    本文最后更新于 2024年6月11日 16:43
+                    本文最后更新于 2024年6月11日 17:24
                   
                 
               </p>
@@ -297,7 +297,7 @@
 <li>行级锁：行级锁有三种，即：<ul>
 <li>记录锁(record lock): 记录锁会对索引加锁，防止其他事务对索引内的内容做修改。</li>
 <li>间隙锁(gap lock)：间隙锁也是对索引加锁，但是锁的是被锁索引与上一个索引之间的间隙，目的是不允许其他事务往这个被锁的间隙中添加数据，从而防止幻读。间隙锁锁的是个 <strong>左开右开</strong> 的区间。InnoDB 在插入数据时，会判断在 B+ 树中符合要求的位置的下一个位置是否存在间隙锁，如果存在的话则需要等待间隙锁释放。</li>
-<li>临键锁(next-key lock): 临键锁是记录锁+间隙锁，锁的是个 <strong>左闭右开</strong> 的区间，因为间隙锁是左闭右闭，而记录锁会锁定当前索引，因此临键锁自然就是 __左闭右开__。 、<blockquote>
+<li>临键锁(next-key lock): 临键锁是记录锁+间隙锁，锁的是个 <strong>左闭右开</strong> 的区间，因为间隙锁是左闭右闭，而记录锁会锁定当前索引，因此临键锁自然就是 <strong>左闭右开</strong> 。<blockquote>
 <p>这三种行级锁都存在 X锁 和 S锁。但是间隙锁的 X锁 与 S锁 没什么区别，因为间隙锁只是不允许其他事务向区间中插入数据，因此间隙锁间是兼容的。</p>
 </blockquote>
 </li>
